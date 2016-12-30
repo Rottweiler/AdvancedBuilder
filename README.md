@@ -24,6 +24,19 @@ class Builder_program
 }
 ```
 
+And in the stub it would look like this (post-build)
+```c#
+class Settings
+{
+    public string My_cool_value { get; set; }
+	
+	public Settings()
+	{
+		My_cool_value = "This string was injected";
+	}
+}
+```
+
 Current to-do:
 * Add SET calls to .ctor, instead of simply replacing ldstr/ldc_i4_1 values. That way we can work with non-static Settings class, which don't already have calls in the .ctor
 * Add SET calls to static classes (.cctor)
