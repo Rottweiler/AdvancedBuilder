@@ -31,3 +31,6 @@ Current to-do:
 
 Currently does:
 * Loads a stub and replaces the ldstr or ldc_i4 values in .ctor (non-static)
+
+# Build requirements
+* dnlib https://github.com/yck1509/dnlib
