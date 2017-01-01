@@ -9,14 +9,18 @@ namespace AdvancedBuilder
     {
         static void Main(string[] args)
         {
-            TestStub.Settings settings = new TestStub.Settings();
-            settings.Install_path = "Hello world, this was injected";
-            settings.Install = true;
-            settings.Secret = 33;
-            settings.Something_secret = "This is also injected";
+            TestStub.Settings.Install_path = "Hello world, this was injected";
+            TestStub.Settings.Install = true;
+            TestStub.Settings.Secret = 33;
+            TestStub.Settings.Something_secret = "This is also injected";
 
-            var builder = new DynamicBuilder<TestStub.Settings>("TestStub.exe");
-            builder.Build(settings, "build.exe");
+            var builder = new NormalBuilder()
+            {
+                Stub = "TestStub.exe",
+                FullName = "TestStub.Settings"
+            };
+
+            builder.Build("build.exe");
         }
     }
 }

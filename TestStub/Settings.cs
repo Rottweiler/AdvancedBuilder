@@ -1,23 +1,10 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
-
-namespace TestStub
+﻿namespace TestStub
 {
-    public class Settings
+    public static class Settings
     {
-        public string Install_path { get; set; }
-        public bool Install { get; set; }
-        public int Secret { get; set; }
-
-        public string Something_secret { get; set; }
-
-        public Settings()
-        {
-            Install_path = "";
-            Install = false;
-            Secret = 0;
-            Something_secret = "";
-        }
+        public static string Install_path = "";
+        public static bool Install = false;
+        public static int Secret = 0;
+        public static string Something_secret = "";
     }
 }

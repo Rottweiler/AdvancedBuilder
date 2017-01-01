@@ -2,21 +2,20 @@
 using dnlib.DotNet;
 using dnlib.DotNet.Emit;
 using System.IO;
-using System.Reflection;
 
 namespace AdvancedBuilder
 {
-    class DynamicBuilder<T>
+    class DynamicBuilder
     {
         public string Stub { get; set; }
         public string Namespace_and_class { get; set; }
         public bool Is_static { get; set; }
 
-        public DynamicBuilder(string stub_assembly_path)
+        public DynamicBuilder(Type type, string stub_assembly_path)
         {
             Stub = Path.GetFullPath(stub_assembly_path);
-            Namespace_and_class = typeof(T).FullName;
-            Is_static = typeof(T).IsAbstract && typeof(T).IsSealed;
+            Namespace_and_class = type.FullName;
+            Is_static = type.IsAbstract && type.IsSealed;
         }
 
         /// <summary>
@@ -31,29 +30,64 @@ namespace AdvancedBuilder
                    code == OpCodes.Ldc_I4_0);
         }
 
-        public bool Build(T SettingsClass, string output_path)
+        public bool Build(Type type, string output_path)
         {
-            string constructor = Is_static ? ".cctor" : ".ctor";
+            //string constructor = Is_static ? ".cctor" : ".ctor";
+
+            string constructor = ".cctor";
 
             //load stub (assembly)
             var assembly = AssemblyDef.Load(Stub);
 
             //get properties from settings class (provided, structure must be the same as the one we're writing to)
-            var props = typeof(T).GetProperties();
+            var props = type.GetProperties();
 
             //scan for the settings class in the stub
             MethodDef method = null;
             foreach (var type_definition in assembly.ManifestModule.Types) //Modules[0]
                 if (type_definition.FullName == Namespace_and_class) //xClient.Config.Settings
-                    foreach (MethodDef method_definition in type_definition.Methods)
-                        if (method_definition.Name == constructor)
-                        {
-                            method = method_definition;
-                        }
+                {
+                    var mduser = new MethodDefUser(".cctor", MethodSig.CreateInstance(assembly.ManifestModule.CorLibTypes.Void),
+                            MethodImplAttributes.IL | MethodImplAttributes.Managed,
+                            MethodAttributes.Public |
+                            MethodAttributes.SpecialName | MethodAttributes.RTSpecialName);
+                    type_definition.Methods.Add(mduser);
+                    mduser.Body = new CilBody();
+                    method = mduser;
+                }
+                    //foreach (MethodDef method_definition in type_definition.Methods)
+                    //    if (method_definition.Name == constructor)
+                    //    {
+                    //        method = method_definition;
+                    //    }
+
+
+            
+            
 
             //start replacing the initial property in settings .ctor
             if (method != null)
             {
+
+                //int i = 0;
+                //var instructions = method.Body.Instructions;
+                //Console.WriteLine(instructions.Count);
+                //foreach(Instruction instruction in instructions)
+                //{
+                //    Console.WriteLine(instruction.ToString());
+                //}
+                
+                foreach (var p in props)
+                {
+                    if(p.GetValue(null, null).GetType() == typeof(string))
+                    {
+                        var inst = Instruction.Create(OpCodes.Ldstr, (string)p.GetValue(null, null));
+                        method.Body.Instructions.Add(inst);
+                    }
+                   
+                }
+
+                /* Old code
                 int i = 0;
                 var instructions = method.Body.Instructions;
                 for (int j = 0; j < instructions.Count; j++)
@@ -69,7 +103,7 @@ namespace AdvancedBuilder
                     {
                         i++;
                     }
-                }
+                }*/
             }else
             {
                 throw new InvalidStubStructureException("Incompatible stub!");
@@ -98,7 +132,7 @@ public static class PropertyInfoExtension
     /// <param name="pi"></param>
     /// <param name="value"></param>
     /// <returns></returns>
-    public static Instruction CreateCall(this PropertyInfo pi, object value)
+    public static Instruction CreateCall(this System.Reflection.PropertyInfo pi, object value)
     {
         var arg = Instruction.Create(OpCodes.Ldarg_0); // 1 argument, index 0
         var instruction = value.ToInstruction(); //ldstr or whatever else it is (this is dynamic thanks to below method)
@@ -109,6 +143,16 @@ public static class PropertyInfoExtension
         //not sure how to place these instructions in a body correctly..
         //also we might have to erase the old set instructions in the old .ctor
         return null;
+    }
+
+    public static OpCode ToOpCode(this System.Reflection.PropertyInfo property)
+    {
+        if(property.GetValue(null,null).GetType() == typeof(string))
+        {
+            return OpCodes.Ldstr;
+        }
+
+        return OpCodes.Nop;
     }
 
     /// <summary>
